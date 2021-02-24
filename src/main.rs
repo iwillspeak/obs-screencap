@@ -5,20 +5,9 @@ use dbus::{
 };
 use std::{collections::HashMap, error::Error, time::Duration};
 
-#[allow(dead_code)]
-#[allow(unused_imports)]
-mod screenshare;
+mod generated;
 
-#[allow(dead_code)]
-#[allow(unused_imports)]
-mod request;
-
-#[allow(dead_code)]
-#[allow(unused_imports)]
-mod session;
-
-use request::OrgFreedesktopPortalRequestResponse;
-use screenshare::OrgFreedesktopPortalScreenCast;
+use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Create a new session and work out our session's sender token. Portal
