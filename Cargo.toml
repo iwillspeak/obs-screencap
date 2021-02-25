@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 dbus = "0.9"
+rand = "0.8"
 
 [build-dependencies]
 dbus-codegen = "0.9"
