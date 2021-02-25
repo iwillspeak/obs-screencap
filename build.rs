@@ -16,8 +16,7 @@ fn introspect_one(out_dir: &Path, xml_name: &str) -> Result<(), Box<dyn Error>> 
     ));
     println!("cargo:rerun-if-changed={0}", introspect_path.display());
     let src = dbus_codegen::generate(
-        &std::fs::read_to_string(introspect_path)
-        .expect("Error reading introspection"),
+        &std::fs::read_to_string(introspect_path)?,
         &gen_opts,
     )?;
     std::fs::write(

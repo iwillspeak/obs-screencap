@@ -1,24 +1,27 @@
-use dbus::{Message, Path, arg::{RefArg, Variant}, blocking::{Connection, Proxy}};
-use std::{collections::HashMap, error::Error, sync::Arc, time::Duration};
+use dbus::{
+    arg::{RefArg, Variant},
+    blocking::{Connection, Proxy},
+    Message, Path,
+};
+use std::{collections::HashMap, error::Error, time::Duration};
 
 mod generated;
 
 use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast};
 
 struct ConnectionState {
-    connection: Connection,
+    connection: Connection, 
     sender_token: String,
 }
 
 impl ConnectionState {
-
     /// Open a new D-Bus connection to use for all our requests
     pub fn open_new() -> Result<Self, dbus::Error> {
         // Create a new session and work out our session's sender token. Portal
         // requests will send responses to paths based on this token.
         let connection = Connection::new_session()?;
         let sender_token = String::from(&connection.unique_name().replace(".", "_")[1..]);
-        println!("Connection::{:?}", sender_token);      
+        println!("Connection::{:?}", sender_token);
         Ok(ConnectionState {
             connection,
             sender_token,
@@ -35,12 +38,15 @@ impl ConnectionState {
     }
 }
 
-fn proxied_request<TResponse, RequestHandler, ResponseHandler>(state: &ConnectionState, make_request: RequestHandler, mut on_response: ResponseHandler)
-    
--> Result<TResponse, Box<dyn Error>> 
-where ResponseHandler: FnMut(OrgFreedesktopPortalRequestResponse) -> TResponse + Send + 'static,
-          RequestHandler: FnOnce(&str) -> Result<(), Box<dyn Error>>,
-          TResponse: Send + Sync + 'static
+fn proxied_request<TResponse, RequestHandler, ResponseHandler>(
+    state: &ConnectionState,
+    make_request: RequestHandler,
+    mut on_response: ResponseHandler,
+) -> Result<TResponse, Box<dyn Error>>
+where
+    ResponseHandler: FnMut(OrgFreedesktopPortalRequestResponse) -> TResponse + Send + 'static,
+    RequestHandler: FnOnce(&str) -> Result<(), Box<dyn Error>>,
+    TResponse: Send + Sync + 'static,
 {
     // Portal requests return their results via messages to a `Response` object.
     // To protect against race conditions we open a proxy to the expected
@@ -78,7 +84,6 @@ where ResponseHandler: FnMut(OrgFreedesktopPortalRequestResponse) -> TResponse +
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-
     let state = ConnectionState::open_new()?;
 
     // Create a proxy pointing to the main desktop portal. We can then call
@@ -120,31 +125,48 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .as_str()
                 .unwrap()
                 .to_owned()
-        })?;
+        },
+    )?;
 
-    proxied_request(&state,
+    proxied_request(
+        &state,
         |request_id| {
             let session = dbus::Path::from(&session);
             let mut select_args = HashMap::<String, Variant<Box<dyn RefArg>>>::new();
-            select_args.insert("handle_token".into(), Variant(Box::new(String::from(request_id))));
-            select_args.insert("types".into(), Variant(Box::new(desktop_proxy.available_source_types()?)));
+            select_args.insert(
+                "handle_token".into(),
+                Variant(Box::new(String::from(request_id))),
+            );
+            select_args.insert(
+                "types".into(),
+                Variant(Box::new(desktop_proxy.available_source_types()?)),
+            );
             desktop_proxy.select_sources(session, select_args)?;
             Ok(())
-        }, |_| {
-            ()
-        })?;
+        },
+        |_| (),
+    )?;
 
-    proxied_request(&state,
+    proxied_request(
+        &state,
         |request_id| {
             let session = dbus::Path::from(&session);
             let mut select_args = HashMap::<String, Variant<Box<dyn RefArg>>>::new();
-            select_args.insert("handle_token".into(), Variant(Box::new(String::from(request_id))));
+            select_args.insert(
+                "handle_token".into(),
+                Variant(Box::new(String::from(request_id))),
+            );
             desktop_proxy.start(session, "", select_args)?;
             Ok(())
-        }, |response| {
+        },
+        |response| {
             println!("GOT screenshare {0:#?}", response);
             ()
-        })?;
+        },
+    )?;
+
+    let pipe_fd = desktop_proxy.open_pipe_wire_remote(dbus::Path::from(&session), HashMap::new())?;
+    println!("Pipewire FD: {0:?}", pipe_fd);
 
     Ok(())
 }
