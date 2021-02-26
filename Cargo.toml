@@ -9,6 +9,8 @@ edition = "2018"
 [dependencies]
 dbus = "0.9"
 rand = "0.8"
+pipewire = "0.2"
+pipewire-sys = "0.2"
 
 [build-dependencies]
 dbus-codegen = "0.9"

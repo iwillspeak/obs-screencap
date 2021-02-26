@@ -1,14 +1,12 @@
-use dbus::{
-    arg::{RefArg, Variant},
-    blocking::{Connection, Proxy},
-    Message, Path,
-};
-use std::{collections::HashMap, error::Error, time::Duration};
+use dbus::{Message, Path, arg::{PropMap, RefArg, Variant, cast, prop_cast}, blocking::{Connection, Proxy}};
+use pipewire::Loop;
+use std::{collections::HashMap, convert, error::Error, ptr, time::Duration};
 
 mod generated;
-
 use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast};
 
+/// D-Bus connection state. Used to access the Desktop portal
+/// and open our screencast.
 struct ConnectionState {
     connection: Connection, 
     sender_token: String,
@@ -35,6 +33,29 @@ impl ConnectionState {
             "/org/freedesktop/portal/desktop",
             Duration::from_secs(20),
         )
+    }
+}
+
+/// A single stream open in the capture session
+#[derive(Debug)]
+struct CaptureStream {
+    pipewire_node: u64,
+    // TODO: other parts of the stream
+}
+
+impl convert::From<PropMap> for CaptureStream {
+    fn from(results: PropMap) -> Self {
+        let streams = results.get("streams").unwrap();
+        println!("streams: {0:?}", streams);
+        for inner in streams.as_iter().unwrap() {
+            for inner_inner in inner.as_iter().unwrap() {
+                println!("IIN: {0:?}", inner_inner.as_iter().unwrap().next().unwrap().as_u64());
+            }
+        }
+        
+        CaptureStream {
+            pipewire_node: 47
+        }
     }
 }
 
@@ -117,8 +138,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(())
         },
         |a| {
-            println!("GOT: {:?}", a.response);
-            println!("GOT: {:?}", a.results);
             a.results
                 .get("session_handle")
                 .unwrap()
@@ -147,7 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         |_| (),
     )?;
 
-    proxied_request(
+    let stream = proxied_request(
         &state,
         |request_id| {
             let session = dbus::Path::from(&session);
@@ -160,13 +179,37 @@ fn main() -> Result<(), Box<dyn Error>> {
             Ok(())
         },
         |response| {
-            println!("GOT screenshare {0:#?}", response);
-            ()
+            CaptureStream::from(response.results)
         },
     )?;
+    println!("Stream: {0:?}", stream);
 
     let pipe_fd = desktop_proxy.open_pipe_wire_remote(dbus::Path::from(&session), HashMap::new())?;
     println!("Pipewire FD: {0:?}", pipe_fd);
+
+    pipewire::init();
+    let pw_loop = pipewire::MainLoop::new()?;
+    let pw_context = pipewire::Context::new(&pw_loop)?;
+
+    println!("PW Context: {0:?}", pw_context);
+
+    // TODO: need to connect to the FD we have. This means we need to change
+    //       the pipewire bindings to expose connect_fd.
+    let core = unsafe {
+        let ctx = pipewire_sys::pw_context_new(pw_loop.as_ptr(), ptr::null_mut(), 0);
+        pipewire_sys::pw_context_connect_fd(
+            ctx,
+            pipe_fd.into_fd(),
+            ptr::null_mut(),
+            0
+        )
+    };
+    println!("Core:: {0:?}", core);
+
+    pw_loop.run();
+
+    drop(pw_loop);
+    unsafe { pipewire::deinit(); }
 
     Ok(())
 }
