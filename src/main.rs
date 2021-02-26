@@ -1,6 +1,10 @@
-use dbus::{Message, Path, arg::{PropMap, RefArg, Variant, cast, prop_cast}, blocking::{Connection, Proxy}};
-use pipewire::Loop;
-use std::{collections::HashMap, convert, error::Error, ptr, time::Duration};
+use dbus::{
+    arg::{PropMap, RefArg, Variant},
+    blocking::{Connection, Proxy},
+    Message, Path,
+};
+use pipewire::properties;
+use std::{collections::HashMap, convert, error::Error, ffi::CString, ptr, time::Duration};
 
 mod generated;
 use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast};
@@ -8,7 +12,7 @@ use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenC
 /// D-Bus connection state. Used to access the Desktop portal
 /// and open our screencast.
 struct ConnectionState {
-    connection: Connection, 
+    connection: Connection,
     sender_token: String,
 }
 
@@ -49,13 +53,14 @@ impl convert::From<PropMap> for CaptureStream {
         println!("streams: {0:?}", streams);
         for inner in streams.as_iter().unwrap() {
             for inner_inner in inner.as_iter().unwrap() {
-                println!("IIN: {0:?}", inner_inner.as_iter().unwrap().next().unwrap().as_u64());
+                println!(
+                    "IIN: {0:?}",
+                    inner_inner.as_iter().unwrap().next().unwrap().as_u64()
+                );
             }
         }
-        
-        CaptureStream {
-            pipewire_node: 47
-        }
+
+        CaptureStream { pipewire_node: 47 }
     }
 }
 
@@ -104,7 +109,15 @@ where
     }
 }
 
+/// # Run the Test Application
+///
+/// We have two main moving parts here. First we make D-Bus calls to obtain a
+/// ScreenCast session and start it. Once we have done that we connect to 
+/// the raw video using Pipewire.
 fn main() -> Result<(), Box<dyn Error>> {
+
+    // - - - - - - - - - - - - - - PORTAL - - - - - - - - - - - - - - 
+
     let state = ConnectionState::open_new()?;
 
     // Create a proxy pointing to the main desktop portal. We can then call
@@ -134,6 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 "session_handle_token".into(),
                 Variant(Box::new(String::from(request_id))),
             );
+            println!("requesting session: {0:#?}", session_args);
             state.desktop_proxy().create_session(session_args)?;
             Ok(())
         },
@@ -146,6 +160,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                 .to_owned()
         },
     )?;
+    println!("@GOT session: {0}", session);
 
     proxied_request(
         &state,
@@ -178,14 +193,15 @@ fn main() -> Result<(), Box<dyn Error>> {
             desktop_proxy.start(session, "", select_args)?;
             Ok(())
         },
-        |response| {
-            CaptureStream::from(response.results)
-        },
+        |response| CaptureStream::from(response.results),
     )?;
     println!("Stream: {0:?}", stream);
 
-    let pipe_fd = desktop_proxy.open_pipe_wire_remote(dbus::Path::from(&session), HashMap::new())?;
+    let pipe_fd =
+        desktop_proxy.open_pipe_wire_remote(dbus::Path::from(&session), HashMap::new())?;
     println!("Pipewire FD: {0:?}", pipe_fd);
+
+    // - - - - - - - - - - - - - - PIPEWIRE - - - - - - - - - - - - - - 
 
     pipewire::init();
     let pw_loop = pipewire::MainLoop::new()?;
@@ -193,23 +209,42 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("PW Context: {0:?}", pw_context);
 
-    // TODO: need to connect to the FD we have. This means we need to change
-    //       the pipewire bindings to expose connect_fd.
-    let core = unsafe {
-        let ctx = pipewire_sys::pw_context_new(pw_loop.as_ptr(), ptr::null_mut(), 0);
-        pipewire_sys::pw_context_connect_fd(
-            ctx,
+    // FIXME: Add safe bindings so we don't need the unsafe block here...
+    // let core = pw_context.connect_fd(pipe_fd.into_fd(), None)?;
+
+    unsafe {
+        let pw_core = pipewire_sys::pw_context_connect_fd(
+            pw_context.as_ptr(),
             pipe_fd.into_fd(),
             ptr::null_mut(),
-            0
-        )
-    };
-    println!("Core:: {0:?}", core);
+            0,
+        );
+        println!("Core:: {0:?}", pw_core);
+        // FIXME: add listener to the core so we can observe errors.
+
+        let stream_name = CString::new("Test stream")?;
+        use pipewire_sys as pw_sys;
+        let stream = pipewire_sys::pw_stream_new(
+            pw_core,
+            stream_name.as_ptr(),
+            properties! {
+                "media.type" => "Video",
+                "media.category" => "Capture",
+                "media.role" => "Screen"
+            }
+            .as_ptr(),
+        );
+        println!("Stream: {0:?}", stream);
+
+        // TODO: listen to the stream events.
+    }
 
     pw_loop.run();
 
     drop(pw_loop);
-    unsafe { pipewire::deinit(); }
+    unsafe {
+        pipewire::deinit();
+    }
 
     Ok(())
 }

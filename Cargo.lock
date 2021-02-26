@@ -247,8 +247,6 @@ dependencies = [
 [[package]]
 name = "libspa"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb2d37fac3462c1ed6e836bcaa347db6d5bb3e62e410988f270121a24d9f9622"
 dependencies = [
  "bitflags",
  "libspa-sys",
@@ -257,8 +255,6 @@ dependencies = [
 [[package]]
 name = "libspa-sys"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "607f768296c29f09a51bab3f1a31414fe0abba295edafaa30853e87e794a773b"
 dependencies = [
  "bindgen",
  "system-deps",
@@ -328,8 +324,6 @@ checksum = "19b17cddbe7ec3f8bc800887bab5e717348c95ea2ca0b1bf0837fb964dc67099"
 [[package]]
 name = "pipewire"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0227f5f22225f4df19b6e6890b63b36d53918f267941da2332c419312a3efdd8"
 dependencies = [
  "anyhow",
  "bitflags",
@@ -344,8 +338,6 @@ dependencies = [
 [[package]]
 name = "pipewire-sys"
 version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9237480e2c4a5f316116d6e5c8a7de3cc187145a83836278a0c936c60f30d228"
 dependencies = [
  "bindgen",
  "libspa-sys",
