@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 dbus = "0.9"
 rand = "0.8"
+bitflags = "1.2"
 pipewire =  { path = "/home/will/Repositories/pipewire-rs/pipewire" }
 pipewire-sys =  { path = "/home/will/Repositories/pipewire-rs/pipewire-sys" }
 # pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "master" }
