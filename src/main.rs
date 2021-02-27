@@ -10,11 +10,10 @@ mod portal;
 /// ScreenCast session and start it. Once we have done that we connect to
 /// the raw video using Pipewire.
 fn main() -> Result<(), Box<dyn Error>> {
+
     // - - - - - - - - - - - - - - PORTAL - - - - - - - - - - - - - -
-    let mut screen_cast = ScreenCast::new()?;
-    println!("Source types: {0:?}", screen_cast.source_types());
-    screen_cast.set_source_types(portal::SourceType::WINDOW);
-    let screen_cast = screen_cast.start(None)?;
+    
+    let screen_cast = ScreenCast::new()?.start(None)?;
 
     // - - - - - - - - - - - - - - PIPEWIRE - - - - - - - - - - - - - -
 

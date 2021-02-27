@@ -12,7 +12,7 @@ use dbus::{
     channel::Token,
     Message, Path,
 };
-use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast};
+use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalSession, OrgFreedesktopPortalScreenCast};
 use std::{
     collections::HashMap,
     os::unix::prelude::RawFd,
@@ -148,6 +148,7 @@ impl ScreenCast {
 
         Ok(ActiveScreenCast {
             state: self.state,
+            session_path: self.session,
             pipewire_fd,
             streams,
         })
@@ -158,6 +159,7 @@ impl ScreenCast {
 /// to PipeWire along with metadata for the active streams.
 pub struct ActiveScreenCast {
     state: ConnectionState,
+    session_path: String,
     pipewire_fd: OwnedFd,
     streams: Vec<ScreenCastStream>,
 }
@@ -173,7 +175,19 @@ impl ActiveScreenCast {
         self.streams.iter()
     }
 
-    // TODO: Close API + drop Impl
+    /// Close the ScreenCast session. This ends the cast.
+    pub fn close(&self) -> Result<(), PortalError> {
+        // Open a handle to the active session, and close it.
+        let session = Session::open(&self.state, &self.session_path)?;
+        session.close()?;
+        Ok(())
+    }
+}
+
+impl std::ops::Drop for ActiveScreenCast {
+    fn drop(&mut self) {
+        let _ = self.close();
+    }
 }
 
 pub struct ScreenCastStream {}
@@ -295,11 +309,39 @@ impl<'a, T> std::ops::Drop for Request<'a, T> {
     }
 }
 
+/// A session handle. 
+struct Session<'a> {
+    proxy: Proxy<'a, &'a Connection>,
+}
+
+impl<'a> Session<'a> {
+
+    pub fn open(state: &'a ConnectionState, path: &str) -> Result<Self, PortalError> {
+        let path = dbus::Path::new(path)?;
+        let proxy = state.connection.with_proxy(
+            "org.freedesktop.portal.Desktop",
+            path,
+            Duration::from_secs(20),
+        );
+        Ok(Session {
+            proxy
+        })
+    }
+
+    pub fn close(&self) -> Result<(), PortalError> {
+        self.proxy.close()?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::SourceType;
 
     #[test]
-    pub fn it_works() {
-        assert!(false)
+    pub fn check_source_types() {
+        assert_eq!(1, SourceType::MONITOR.bits());
+        assert_eq!(2, SourceType::WINDOW.bits());
+        assert_eq!(3, (SourceType::WINDOW | SourceType::MONITOR).bits());
     }
 }
