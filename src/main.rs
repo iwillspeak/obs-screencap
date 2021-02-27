@@ -10,9 +10,8 @@ mod portal;
 /// ScreenCast session and start it. Once we have done that we connect to
 /// the raw video using Pipewire.
 fn main() -> Result<(), Box<dyn Error>> {
-
     // - - - - - - - - - - - - - - PORTAL - - - - - - - - - - - - - -
-    
+
     let screen_cast = ScreenCast::new()?.start(None)?;
 
     // - - - - - - - - - - - - - - PIPEWIRE - - - - - - - - - - - - - -
@@ -34,6 +33,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             0,
         );
         println!("Core:: {0:?}", pw_core);
+
+        for stream in screen_cast.streams() {
+            println!("Got stream: {0:?}", stream);
+        }
+
         // FIXME: add listener to the core so we can observe errors.
 
         let stream_name = CString::new("Test stream")?;

@@ -12,9 +12,13 @@ use dbus::{
     channel::Token,
     Message, Path,
 };
-use generated::{OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalSession, OrgFreedesktopPortalScreenCast};
+use generated::{
+    OrgFreedesktopPortalRequestResponse, OrgFreedesktopPortalScreenCast,
+    OrgFreedesktopPortalSession,
+};
 use std::{
     collections::HashMap,
+    convert::TryInto,
     os::unix::prelude::RawFd,
     sync::mpsc::{self, Receiver},
     time::Duration,
@@ -28,6 +32,7 @@ mod generated;
 pub enum PortalError {
     Generic(String),
     DBus(dbus::Error),
+    Parse,
 }
 
 impl std::convert::From<String> for PortalError {
@@ -129,7 +134,21 @@ impl ScreenCast {
         }
 
         let streams = {
-            let request = Request::new(&self.state)?;
+            let request = Request::with_handler(&self.state, |response| {
+                match response.results.get("streams") {
+                    Some(streams) => match streams.as_iter() {
+                        Some(streams) => streams
+                            .flat_map(|s| {
+                                s.as_iter()
+                                    .into_iter()
+                                    .flat_map(|t| t.map(|u| u.try_into()))
+                            })
+                            .collect(),
+                        None => Err(PortalError::Parse),
+                    },
+                    None => Err(PortalError::Parse),
+                }
+            })?;
             let session = dbus::Path::from(&self.session);
             let mut select_args = HashMap::<String, Variant<Box<dyn RefArg>>>::new();
             select_args.insert(
@@ -137,11 +156,8 @@ impl ScreenCast {
                 Variant(Box::new(String::from(&request.handle))),
             );
             desktop_proxy.start(session, parent_window.unwrap_or(""), select_args)?;
-            request.wait_response()?;
-
-            // FIXME: deserialise streams properly
-            Vec::new()
-        };
+            request.wait_response()?
+        }?;
 
         let pipewire_fd =
             desktop_proxy.open_pipe_wire_remote(dbus::Path::from(&self.session), HashMap::new())?;
@@ -190,7 +206,34 @@ impl std::ops::Drop for ActiveScreenCast {
     }
 }
 
-pub struct ScreenCastStream {}
+#[derive(Debug)]
+pub struct ScreenCastStream {
+    pipewire_node: u64,
+    // TODO: other stream metadata.
+}
+
+impl ScreenCastStream {
+    /// Get the PipeWire node ID for this stream.
+    pub fn pipewire_node(&self) -> u64 {
+        self.pipewire_node
+    }
+}
+
+impl std::convert::TryFrom<&dyn RefArg> for ScreenCastStream {
+    type Error = PortalError;
+
+    fn try_from(value: &dyn RefArg) -> Result<Self, Self::Error> {
+        let mut parts_iter = value.as_iter().ok_or(PortalError::Parse)?;
+        let node_id = parts_iter
+            .next()
+            .and_then(|r| r.as_u64())
+            .ok_or(PortalError::Parse)?;
+        // TODO: parse other metdata here.
+        Ok(ScreenCastStream {
+            pipewire_node: node_id,
+        })
+    }
+}
 
 bitflags! {
     pub struct SourceType : u32  {
@@ -309,13 +352,12 @@ impl<'a, T> std::ops::Drop for Request<'a, T> {
     }
 }
 
-/// A session handle. 
+/// A session handle.
 struct Session<'a> {
     proxy: Proxy<'a, &'a Connection>,
 }
 
 impl<'a> Session<'a> {
-
     pub fn open(state: &'a ConnectionState, path: &str) -> Result<Self, PortalError> {
         let path = dbus::Path::new(path)?;
         let proxy = state.connection.with_proxy(
@@ -323,9 +365,7 @@ impl<'a> Session<'a> {
             path,
             Duration::from_secs(20),
         );
-        Ok(Session {
-            proxy
-        })
+        Ok(Session { proxy })
     }
 
     pub fn close(&self) -> Result<(), PortalError> {
