@@ -1,6 +1,10 @@
-use pipewire::properties;
+use pipewire::{
+    properties,
+    stream::{Stream, StreamDirection},
+    Context, MainLoop,
+};
 use portal::ScreenCast;
-use std::{error::Error, ffi::CString, ptr};
+use std::error::Error;
 
 mod portal;
 
@@ -17,45 +21,29 @@ fn main() -> Result<(), Box<dyn Error>> {
     // - - - - - - - - - - - - - - PIPEWIRE - - - - - - - - - - - - - -
 
     pipewire::init();
-    let pw_loop = pipewire::MainLoop::new()?;
-    let pw_context = pipewire::Context::new(&pw_loop)?;
+    let pw_loop = MainLoop::new()?;
+    let pw_context = Context::new(&pw_loop)?;
+    let core = pw_context.connect_fd(screen_cast.pipewire_fd(), None)?;
 
-    println!("PW Context: {0:?}", pw_context);
+    use pipewire_sys as pw_sys;
 
-    // FIXME: Add safe bindings so we don't need the unsafe block here...
-    // let core = pw_context.connect_fd(pipe_fd.into_fd(), None)?;
+    let mut stream = Stream::new(
+        &core,
+        "test-screencap",
+        properties! {
+            "media.type" => "Video",
+            "media.category" => "Capture",
+            "media.role" => "Screen"
+        },
+    )?;
+    println!("Stream: {0:?}", stream);
 
-    unsafe {
-        let pw_core = pipewire_sys::pw_context_connect_fd(
-            pw_context.as_ptr(),
-            screen_cast.pipewire_fd(),
-            ptr::null_mut(),
-            0,
-        );
-        println!("Core:: {0:?}", pw_core);
-
-        for stream in screen_cast.streams() {
-            println!("Got stream: {0:?}", stream);
-        }
-
-        // FIXME: add listener to the core so we can observe errors.
-
-        let stream_name = CString::new("Test stream")?;
-        use pipewire_sys as pw_sys;
-        let stream = pipewire_sys::pw_stream_new(
-            pw_core,
-            stream_name.as_ptr(),
-            properties! {
-                "media.type" => "Video",
-                "media.category" => "Capture",
-                "media.role" => "Screen"
-            }
-            .as_ptr(),
-        );
-        println!("Stream: {0:?}", stream);
-
-        // TODO: listen to the stream events.
-    }
+    let connected = stream.connect(
+        StreamDirection::INPUT,
+        Some(screen_cast.streams().next().unwrap().pipewire_node()),
+        &mut [],
+    )?;
+    println!("Stream: {0:?} (connected: {1:?})", stream, connected);
 
     pw_loop.run();
 

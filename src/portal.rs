@@ -99,6 +99,7 @@ impl ScreenCast {
     }
 
     /// Get the supported source types for this connection
+    #[allow(dead_code)]
     pub fn source_types(&self) -> Result<SourceType, PortalError> {
         let types = self.state.desktop_proxy().available_source_types()?;
         Ok(SourceType::from_bits_truncate(types))
@@ -106,6 +107,7 @@ impl ScreenCast {
 
     /// Set the source types to capture. This should be a subset of
     /// those from `source_types()`.
+    #[allow(dead_code)]
     pub fn set_source_types(&mut self, types: SourceType) {
         self.source_types = Some(types);
     }
@@ -208,13 +210,13 @@ impl std::ops::Drop for ActiveScreenCast {
 
 #[derive(Debug)]
 pub struct ScreenCastStream {
-    pipewire_node: u64,
+    pipewire_node: u32,
     // TODO: other stream metadata.
 }
 
 impl ScreenCastStream {
     /// Get the PipeWire node ID for this stream.
-    pub fn pipewire_node(&self) -> u64 {
+    pub fn pipewire_node(&self) -> u32 {
         self.pipewire_node
     }
 }
@@ -227,6 +229,7 @@ impl std::convert::TryFrom<&dyn RefArg> for ScreenCastStream {
         let node_id = parts_iter
             .next()
             .and_then(|r| r.as_u64())
+            .map(|r| r as u32)
             .ok_or(PortalError::Parse)?;
         // TODO: parse other metdata here.
         Ok(ScreenCastStream {
