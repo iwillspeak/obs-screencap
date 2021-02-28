@@ -4,6 +4,29 @@
 //!
 //! The general interaction pattern with the `ScreenCast` portal is to open a
 //! session, set which source types are of interest, and call `start()`.
+//!
+//! ```no_run
+//! # use portal_screencast::{ScreenCast, PortalError};
+//! # fn test() -> Result<(), PortalError> {
+//! let screen_cast = ScreenCast::new()?.start(None)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! In more complex cases you can modify the `ScreenCast` before starting it:
+//!
+//! ```no_run
+//! # use portal_screencast::{ScreenCast, PortalError, SourceType};
+//! # fn test() -> Result<(), PortalError> {
+//! let mut screen_cast = ScreenCast::new()?;
+//! // Set which source types to allow, and enable multiple items to be shared.
+//! screen_cast.set_source_types(SourceType::MONITOR);
+//! screen_cast.enable_multiple();
+//! // If you have a window handle you can tie the dialog to it
+//! let screen_cast = screen_cast.start(Some("wayland:<window_id>"))?;
+//! # Ok(())
+//! # }
+//! ```
 
 use bitflags::bitflags;
 use dbus::{
@@ -39,7 +62,7 @@ pub enum PortalError {
     /// A problem with deserialising the response to a portal request.
     Parse,
     /// Cancelled by the user.
-    Cancelled
+    Cancelled,
 }
 
 impl std::convert::From<String> for PortalError {
@@ -68,6 +91,7 @@ impl std::error::Error for PortalError {}
 pub struct ScreenCast {
     state: ConnectionState,
     session: String,
+    multiple: bool,
     source_types: Option<SourceType>,
 }
 
@@ -104,12 +128,12 @@ impl ScreenCast {
         Ok(ScreenCast {
             state,
             session,
+            multiple: false,
             source_types: None,
         })
     }
 
     /// Get the supported source types for this connection
-    #[allow(dead_code)]
     pub fn source_types(&self) -> Result<SourceType, PortalError> {
         let types = self.state.desktop_proxy().available_source_types()?;
         Ok(SourceType::from_bits_truncate(types))
@@ -117,9 +141,15 @@ impl ScreenCast {
 
     /// Set the source types to capture. This should be a subset of
     /// those from `source_types()`.
-    #[allow(dead_code)]
     pub fn set_source_types(&mut self, types: SourceType) {
         self.source_types = Some(types);
+    }
+
+    /// Enable multi-stream selection. This allows the user to choose more than
+    /// one thing to share. Each will be a separate item in the
+    /// `ActiveScreenCast::streams()` iterator.
+    pub fn enable_multiple(&mut self) {
+        self.multiple = true;
     }
 
     /// Try to start the screen cast. This will prompt the user to select a
@@ -142,6 +172,7 @@ impl ScreenCast {
                     None => desktop_proxy.available_source_types()?,
                 })),
             );
+            select_args.insert("multiple".into(), Variant(Box::new(self.multiple)));
             desktop_proxy.select_sources(session, select_args)?;
             request.wait_response()?;
         }
