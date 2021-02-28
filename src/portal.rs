@@ -28,11 +28,18 @@ mod generated;
 
 // - - - - - - - - - - - - - - -  Public Interface - - - - - - - - - - - - - -
 
+/// Desktop portal error. This could be an error from the underlying `dbus`
+/// library, a generic error string, or some structured error.
 #[derive(Debug)]
 pub enum PortalError {
+    /// A generic error string describing the problem.
     Generic(String),
+    /// A raw error from the `dbus` library.
     DBus(dbus::Error),
+    /// A problem with deserialising the response to a portal request.
     Parse,
+    /// Cancelled by the user.
+    Cancelled,
 }
 
 impl std::convert::From<String> for PortalError {
@@ -55,6 +62,9 @@ impl std::fmt::Display for PortalError {
 
 impl std::error::Error for PortalError {}
 
+/// An un-opened screencast session. This can be queried fro the supported
+/// capture source types, and used to configure which source types to prompt
+/// for. Each `ScreenCast` can be mde active once by calling `start()`.
 pub struct ScreenCast {
     state: ConnectionState,
     session: String,
@@ -112,7 +122,8 @@ impl ScreenCast {
         self.source_types = Some(types);
     }
 
-    /// Try to start the screen cast.
+    /// Try to start the screen cast. This will prompt the user to select a
+    /// source to share.
     pub fn start(self, parent_window: Option<&str>) -> Result<ActiveScreenCast, PortalError> {
         let desktop_proxy = self.state.desktop_proxy();
 
@@ -137,6 +148,9 @@ impl ScreenCast {
 
         let streams = {
             let request = Request::with_handler(&self.state, |response| {
+                if response.response != 0 {
+                    return Err(PortalError::Cancelled);
+                }
                 match response.results.get("streams") {
                     Some(streams) => match streams.as_iter() {
                         Some(streams) => streams
