@@ -3,10 +3,8 @@ use pipewire::{
     stream::{Stream, StreamDirection},
     Context, MainLoop,
 };
-use portal::ScreenCast;
+use portal_screencast::ScreenCast;
 use std::error::Error;
-
-mod portal;
 
 /// # Run the Test Application
 ///

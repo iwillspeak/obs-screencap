@@ -302,12 +302,9 @@ dependencies = [
 name = "obs-screencap"
 version = "0.1.0"
 dependencies = [
- "bitflags",
- "dbus",
- "dbus-codegen",
  "pipewire",
  "pipewire-sys",
- "rand",
+ "portal-screencast",
 ]
 
 [[package]]
@@ -350,6 +347,16 @@ name = "pkg-config"
 version = "0.3.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
+
+[[package]]
+name = "portal-screencast"
+version = "0.1.0"
+dependencies = [
+ "bitflags",
+ "dbus",
+ "dbus-codegen",
+ "rand",
+]
 
 [[package]]
 name = "ppv-lite86"

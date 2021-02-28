@@ -39,7 +39,7 @@ pub enum PortalError {
     /// A problem with deserialising the response to a portal request.
     Parse,
     /// Cancelled by the user.
-    Cancelled,
+    Cancelled
 }
 
 impl std::convert::From<String> for PortalError {

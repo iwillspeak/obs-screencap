@@ -6,13 +6,13 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[workspace]
+members = [
+    "portal-screencast"
+]
+
 [dependencies]
-dbus = "0.9"
-rand = "0.8"
-bitflags = "1.2"
+portal-screencast = { path = "portal-screencast/" }
 pipewire =  { path = "/home/will/Repositories/pipewire-rs/pipewire" }
 pipewire-sys =  { path = "/home/will/Repositories/pipewire-rs/pipewire-sys" }
 # pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "master" }
-
-[build-dependencies]
-dbus-codegen = "0.9"
