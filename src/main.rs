@@ -1,6 +1,7 @@
 use pipewire::{
     properties,
-    stream::{Stream, StreamDirection},
+    spa::Direction,
+    stream::{Stream, StreamFlags},
     Context, MainLoop,
 };
 use portal_screencast::ScreenCast;
@@ -37,8 +38,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Stream: {0:?}", stream);
 
     let connected = stream.connect(
-        StreamDirection::INPUT,
+        Direction::Input,
         Some(screen_cast.streams().next().unwrap().pipewire_node()),
+        StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS,
         &mut [],
     )?;
     println!("Stream: {0:?} (connected: {1:?})", stream, connected);
