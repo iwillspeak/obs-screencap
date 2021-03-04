@@ -13,6 +13,14 @@ members = [
 
 [dependencies]
 portal-screencast = { path = "portal-screencast/" }
-pipewire =  { path = "/home/will/Repositories/pipewire-rs/pipewire" }
-pipewire-sys =  { path = "/home/will/Repositories/pipewire-rs/pipewire-sys" }
-# pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "master" }
+pipewire-sys =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
+pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
+libc = "0.2"
+
+[build-dependencies]
+cc = "1.0"
+system-deps = "3.0"
+
+[package.metadata.system-deps]
+spa = { name = "libspa-0.2", version = "0.2" }
+pipewire = { name = "libpipewire-0.3", version = "0.3" }
