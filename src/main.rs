@@ -33,8 +33,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let pw_loop = MainLoop::new()?;
     let pw_context = Context::new(&pw_loop)?;
-    let fd = unsafe { libc::fcntl(screen_cast.pipewire_fd(), libc::F_DUPFD_CLOEXEC, 3) };
-    let core = pw_context.connect_fd(fd, None)?;
+    let core = pw_context.connect_fd(screen_cast.pipewire_fd(), None)?;
 
     let _listener = core
         .add_listener_local()
