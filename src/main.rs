@@ -5,7 +5,7 @@ use pipewire::{
     Context, MainLoop,
 };
 use portal_screencast::ScreenCast;
-use std::{error::Error, io::Write};
+use std::{cell::RefCell, error::Error, rc::Rc};
 
 mod haxx {
     //! HAXX: These functions build the SPA_POD structures for us because doing so
@@ -13,6 +13,7 @@ mod haxx {
 
     extern "C" {
         pub fn build_video_params() -> *const core::ffi::c_void;
+        pub fn build_stream_param() -> *const core::ffi::c_void;
     }
 }
 
@@ -44,7 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     use pipewire_sys as pw_sys;
 
-    let mut stream = Stream::new(
+    let stream = Rc::new(RefCell::new(Stream::new(
         &core,
         "test-screencap",
         properties! {
@@ -52,35 +53,60 @@ fn main() -> Result<(), Box<dyn Error>> {
             "media.category" => "Capture",
             "media.role" => "Screen"
         },
-    )?;
+    )?));
     println!("Stream: {0:?}", stream);
 
+    let param_changed_stream = stream.clone();
+    let process_stream = stream.clone();
+
     let _stream_listener = stream
+        .borrow_mut()
         .add_local_listener()
-        .state_changed(|old, new| println!("State: {0:?} -> {1:?}", old, new))
-        .param_changed(|x, y| {
-            println!("Param: {0:?} {1:?}", x, y);
+        .io_changed(|x, y, z| {
+            println!("IO change: , {0:?}, {1:?}, {2:?}", x, y, z);
         })
-        .process(|| {
-            println!("On process");
-            let _ = std::io::stdout().lock().flush();
+        .state_changed(|old, new| println!("State: {0:?} -> {1:?}", old, new))
+        .param_changed(move |x, y| {
+            println!("Param: {0:?} {1:?}", x, y);
+            let param = unsafe { haxx::build_stream_param() };
+            param_changed_stream
+                .borrow_mut()
+                .update_params(&mut [param as _])
+                .unwrap()
+        })
+        .process(move || {
+            let mut stream = process_stream.borrow_mut();
+            let (buff, size, spa_buff) = unsafe {
+                let buff = stream.dequeue_buffer();
+                let size = (*buff).size;
+                let spa_buff = *(*buff).buffer;
+                (buff, size, spa_buff)
+            };
+            println!(
+                "got buffer: {0:?} (size={1}) spa={2:#?}",
+                buff, size, &spa_buff
+            );
+            unsafe {
+                stream.queue_buffer(buff);
+            }
         })
         .register()?;
 
     let param = unsafe { haxx::build_video_params() };
-    let connected = stream.connect(
+    stream.borrow_mut().connect(
         Direction::Input,
         Some(screen_cast.streams().next().unwrap().pipewire_node()),
         StreamFlags::AUTOCONNECT | StreamFlags::MAP_BUFFERS,
         &mut [param as *const _],
     )?;
-    println!("Stream: {0:?} (connected: {1:?})", stream, connected);
+    println!("Stream: {0:?}", stream);
 
     pw_loop.run();
 
     println!("DONE");
 
     drop(pw_loop);
+
     unsafe {
         pipewire::deinit();
     }
