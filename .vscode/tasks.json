@@ -3,16 +3,13 @@
 	"tasks": [
 		{
 			"type": "cargo",
-			"command": "run",
+			"command": "build",
 			"problemMatcher": [
 				"$rustc"
 			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"env": {
-				"PIPEWIRE_DEBUG": "6"
 			},
 			"label": "rust: cargo build"
 		},
