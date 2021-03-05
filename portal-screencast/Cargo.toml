@@ -1,6 +1,11 @@
 [package]
 name = "portal-screencast"
 version = "0.1.0"
+description = "Rustic interface to the ScreenCast Desktop Portal"
+documentation = "https://docs.rs/portal-screencast"
+repository = "https://github.com/iwillspeak/obs-screencap"
+license = "MIT"
+keywords = ["ffi","screen","capture","dbus","linux"]
 authors = ["Will Speak <lithiumflame@gmail.com>"]
 edition = "2018"
 
