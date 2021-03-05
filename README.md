@@ -5,7 +5,7 @@ Experimentation to produce an OBS source which uses the [ScreenCapture portal](h
 ## TODO:
 
  * [x] Open a desktop portal and start a screencast session.
- * [ ] Connect to the screencast stream with PipeWire.
+ * [x] Connect to the screencast stream with PipeWire.
  * [ ] Add an OBS module.
  * [ ] CI and build ergonomics.
 

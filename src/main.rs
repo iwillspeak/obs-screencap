@@ -7,15 +7,7 @@ use pipewire::{
 use portal_screencast::ScreenCast;
 use std::{cell::RefCell, error::Error, rc::Rc};
 
-mod haxx {
-    //! HAXX: These functions build the SPA_POD structures for us because doing so
-    //!       from Rust is akward.
-
-    extern "C" {
-        pub fn build_video_params() -> *const core::ffi::c_void;
-        pub fn build_stream_param() -> *const core::ffi::c_void;
-    }
-}
+mod native_shims;
 
 /// # Run the Test Application
 ///
@@ -67,7 +59,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         .state_changed(|old, new| println!("State: {0:?} -> {1:?}", old, new))
         .param_changed(move |x, y| {
             println!("Param: {0:?} {1:?}", x, y);
-            let param = unsafe { haxx::build_stream_param() };
+            let param = unsafe { native_shims::build_stream_param() };
             param_changed_stream
                 .borrow_mut()
                 .update_params(&mut [param as _])
@@ -91,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         })
         .register()?;
 
-    let param = unsafe { haxx::build_video_params() };
+    let param = unsafe { native_shims::build_video_params() };
     stream.borrow_mut().connect(
         Direction::Input,
         Some(screen_cast.streams().next().unwrap().pipewire_node()),

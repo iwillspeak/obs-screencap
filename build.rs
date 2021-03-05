@@ -5,8 +5,8 @@ fn main() {
     println!("cargo:rerun-if-changed=haxx.c");
 
     cc::Build::new()
-        .file("haxx.c")
+        .file("src/native-shims.c")
         .includes(config.all_include_paths())
         .warnings(false)
-        .compile("foo");
+        .compile("native-shims");
 }

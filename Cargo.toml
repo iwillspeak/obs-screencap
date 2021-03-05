@@ -1,11 +1,12 @@
 [package]
 name = "obs-screencap"
 version = "0.1.0"
+description = "Rustic interface to the ScreenCast Desktop Portal"
+repository = "https://github.com/iwillspeak/obs-screencap"
+license = "MIT"
+# keywords = ["ffi","screen","capture","obs","linux"]
 authors = ["Will Speak <lithiumflame@gmail.com>"]
 edition = "2018"
-license = "MIT"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace]
 members = [

@@ -9,8 +9,6 @@ keywords = ["ffi","screen","capture","dbus","linux"]
 authors = ["Will Speak <lithiumflame@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 dbus = "0.9"
 rand = "0.8"
