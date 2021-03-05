@@ -5,7 +5,7 @@ use pipewire::{
     Context, MainLoop,
 };
 use portal_screencast::ScreenCast;
-use std::{cell::RefCell, error::Error, rc::Rc};
+use std::{cell::RefCell, error::Error, mem, rc::Rc};
 
 mod native_shims;
 
@@ -57,8 +57,24 @@ fn main() -> Result<(), Box<dyn Error>> {
             println!("IO change: , {0:?}, {1:?}, {2:?}", x, y, z);
         })
         .state_changed(|old, new| println!("State: {0:?} -> {1:?}", old, new))
-        .param_changed(move |x, y| {
-            println!("Param: {0:?} {1:?}", x, y);
+        .param_changed(move |id, param| {
+            if param.is_null() || id != libspa_sys::spa_param_type_SPA_PARAM_Format {
+                return;
+            }
+
+            unsafe {
+                let mut media_type = mem::zeroed();
+                let mut media_subtype = mem::zeroed();
+
+                native_shims::spa_format_parse_rs(param, &mut media_type, &mut media_subtype);
+
+                let mut vidya_format = mem::zeroed();
+                native_shims::spa_format_video_raw_parse_rs(param, &mut vidya_format);
+
+                println!("Media: {}({})", media_type, media_subtype);
+                println!("Format: {:#?}", vidya_format);
+            }
+
             let param = unsafe { native_shims::build_stream_param() };
             param_changed_stream
                 .borrow_mut()

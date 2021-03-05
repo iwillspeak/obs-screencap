@@ -35,3 +35,15 @@ extern const struct spa_pod *build_stream_param() {
       SPA_PARAM_BUFFERS_dataType,
       SPA_POD_Int((1 << SPA_DATA_MemPtr) | (1 << SPA_DATA_DmaBuf)));
 }
+
+extern const int spa_format_parse_rs(const struct spa_pod *format,
+                                     uint32_t *media_type,
+                                     uint32_t *media_subtype) {
+  return spa_format_parse(format, media_type, media_subtype);
+}
+
+extern const int
+spa_format_video_raw_parse_rs(const struct spa_pod *format,
+                              struct spa_video_info_raw *info) {
+  return spa_format_video_raw_parse(format, info);
+}

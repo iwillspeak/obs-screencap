@@ -1,6 +1,6 @@
 [package]
 name = "portal-screencast"
-version = "0.1.0"
+version = "0.1.1"
 description = "Rustic interface to the ScreenCast Desktop Portal"
 documentation = "https://docs.rs/portal-screencast"
 repository = "https://github.com/iwillspeak/obs-screencap"

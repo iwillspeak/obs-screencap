@@ -306,6 +306,7 @@ name = "obs-screencap"
 version = "0.1.0"
 dependencies = [
  "cc",
+ "libspa-sys",
  "pipewire",
  "pipewire-sys",
  "portal-screencast",
@@ -357,7 +358,7 @@ checksum = "3831453b3449ceb48b6d9c7ad7c96d5ea673e9b470a1dc578c2ce6521230884c"
 
 [[package]]
 name = "portal-screencast"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bitflags",
  "dbus",

@@ -15,6 +15,7 @@ members = [
 
 [dependencies]
 portal-screencast = { path = "portal-screencast/" }
+libspa-sys =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
 pipewire-sys =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
 pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
 
