@@ -85,7 +85,7 @@ impl std::fmt::Display for PortalError {
 
 impl std::error::Error for PortalError {}
 
-/// An un-opened screencast session. This can be queried fro the supported
+/// An un-opened screencast session. This can be queried for the supported
 /// capture source types, and used to configure which source types to prompt
 /// for. Each `ScreenCast` can be mde active once by calling `start()`.
 pub struct ScreenCast {
@@ -253,6 +253,10 @@ impl std::ops::Drop for ActiveScreenCast {
     }
 }
 
+/// A single active stream
+///
+/// Each item being captured in the `ScreenCast` appears as a stream. This holds
+/// metadata about how to access the stream from the PipeWire session.
 #[derive(Debug)]
 pub struct ScreenCastStream {
     pipewire_node: u32,
@@ -284,6 +288,10 @@ impl std::convert::TryFrom<&dyn RefArg> for ScreenCastStream {
 }
 
 bitflags! {
+    /// Source Type Bitflags
+    ///
+    /// Use `MONITOR` to capture froma screen, `WINDOW` to capture a single
+    /// window, or `all()` to capture either.
     pub struct SourceType : u32  {
         const MONITOR = 0b00001;
         const WINDOW = 0b00010;

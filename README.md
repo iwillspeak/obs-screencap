@@ -11,31 +11,10 @@ Experimentation to produce an OBS source which uses the [ScreenCapture portal](h
 
 ### Structure
 
-Desktop portal interaction code should be in a `portal` module. This should provide an interface such as:
-
-```rust
-impl ScreenCast {
-    pub fn new() -> Result<Self,PortalError>
-    pub fn source_types(&self) -> SourceType // A bitfield enum of the types
-    pub fn set_source_types(&self, types: SourceType)
-    pub fn start(self) -> Result<OpenScreenCast,PortalError>
-}
-
-impl OpenScreenCast {
-    fn pipewire_fd(&self) -> RawFd
-    fn streams(&self) -> Iter<Item=ScreenCastStream>>
-    fn close(self) -> Result<(),PortalError>
-}
-
-impl ScreenCastStream {
-    pub fn pipewire_node(&self) -> u64;
-    pub fn stream_type(&self) -> SourceType;
-    pub fn size(&self) -> (u64, u64);
-    pub fn position(&self) -> (u64, u64);
-}
-```
-
-This will be backed by some private structs: `ConnectionState` to manage our D-Bus connection; `Request`, and `Session` to handle interacting with request and session proxies.
+Interacaction with the ScreenCast desktop portal is contained within the
+`portal-screencast` crate. This crate provides a simplified API around the
+portal through blocking D-Bus requests. It handles negotiating a new screen cast
+and returns the metadata required to connect to it with Pipewire.
 
 For interacting with Pipewire all code should live ina `pipewire` module. This
 should take a `portal::ScreenCastStream` and allow executing a callback on

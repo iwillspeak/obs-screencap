@@ -8,6 +8,7 @@ license = "MIT"
 keywords = ["ffi","screen","capture","dbus","linux"]
 authors = ["Will Speak <lithiumflame@gmail.com>"]
 edition = "2018"
+readme = "README.md"
 
 [dependencies]
 dbus = "0.9"
