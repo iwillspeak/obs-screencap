@@ -1,3 +1,4 @@
+use obs_portal_screencap::native_shims;
 use pipewire::{
     properties,
     spa::Direction,
@@ -6,8 +7,6 @@ use pipewire::{
 };
 use portal_screencast::ScreenCast;
 use std::{cell::RefCell, error::Error, mem, rc::Rc};
-
-mod native_shims;
 
 /// # Run the Test Application
 ///
