@@ -88,6 +88,7 @@ impl std::error::Error for PortalError {}
 /// An un-opened screencast session. This can be queried for the supported
 /// capture source types, and used to configure which source types to prompt
 /// for. Each `ScreenCast` can be mde active once by calling `start()`.
+#[derive(Debug)]
 pub struct ScreenCast {
     state: ConnectionState,
     session: String,
@@ -220,6 +221,7 @@ impl ScreenCast {
 
 /// An active ScreenCast session. This holds a file descriptor for connecting
 /// to PipeWire along with metadata for the active streams.
+#[derive(Debug)]
 pub struct ActiveScreenCast {
     state: ConnectionState,
     session_path: String,
