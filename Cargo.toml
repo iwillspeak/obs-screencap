@@ -1,5 +1,5 @@
 [package]
-name = "obs-screencap"
+name = "obs-portal-screencap"
 version = "0.1.0"
 description = "Rustic interface to the ScreenCast Desktop Portal"
 repository = "https://github.com/iwillspeak/obs-screencap"
@@ -7,6 +7,9 @@ license = "MIT"
 # keywords = ["ffi","screen","capture","obs","linux"]
 authors = ["Will Speak <lithiumflame@gmail.com>"]
 edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "lib"]
 
 [workspace]
 members = [
@@ -18,6 +21,7 @@ portal-screencast = { path = "portal-screencast/" }
 libspa-sys =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
 pipewire-sys =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
 pipewire =  { git = "https://gitlab.freedesktop.org/iwillspeak/pipewire-rs.git", branch = "feature/streams" }
+obs-wrapper = { path = "../rust-obs-plugins" }
 
 [build-dependencies]
 cc = "1.0"
