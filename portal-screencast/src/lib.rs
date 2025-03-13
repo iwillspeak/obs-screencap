@@ -22,6 +22,7 @@
 //! // Set which source types to allow, and enable multiple items to be shared.
 //! screen_cast.set_source_types(SourceType::MONITOR);
 //! screen_cast.enable_multiple();
+//! screen_cast.set_cursor_mode(CursorMode::HIDDEN);
 //! // If you have a window handle you can tie the dialog to it
 //! let screen_cast = screen_cast.start(Some("wayland:<window_id>"))?;
 //! # Ok(())
@@ -88,12 +89,12 @@ impl std::error::Error for PortalError {}
 /// An un-opened screencast session. This can be queried for the supported
 /// capture source types, and used to configure which source types to prompt
 /// for. Each `ScreenCast` can be mde active once by calling `start()`.
-#[derive(Debug)]
 pub struct ScreenCast {
     state: ConnectionState,
     session: String,
     multiple: bool,
     source_types: Option<SourceType>,
+    cursor_mode: Option<CursorMode>,
 }
 
 impl ScreenCast {
@@ -131,6 +132,7 @@ impl ScreenCast {
             session,
             multiple: false,
             source_types: None,
+            cursor_mode: None,
         })
     }
 
@@ -144,6 +146,11 @@ impl ScreenCast {
     /// those from `source_types()`.
     pub fn set_source_types(&mut self, types: SourceType) {
         self.source_types = Some(types);
+    }
+
+    // Set cursor visibilty/mode (HIDDEN by default)
+    pub fn set_cursor_mode(&mut self, mode: CursorMode) {
+        self.cursor_mode = Some(mode);
     }
 
     /// Enable multi-stream selection. This allows the user to choose more than
@@ -174,6 +181,14 @@ impl ScreenCast {
                 })),
             );
             select_args.insert("multiple".into(), Variant(Box::new(self.multiple)));
+            select_args.insert(
+                "cursor_mode".into(),
+                Variant(Box::new(match self.cursor_mode {
+                    Some(mode) => mode.bits(),
+                    None => CursorMode::HIDDEN.bits(),
+                })),
+            );
+
             desktop_proxy.select_sources(session, select_args)?;
             request.wait_response()?;
         }
@@ -221,7 +236,6 @@ impl ScreenCast {
 
 /// An active ScreenCast session. This holds a file descriptor for connecting
 /// to PipeWire along with metadata for the active streams.
-#[derive(Debug)]
 pub struct ActiveScreenCast {
     state: ConnectionState,
     session_path: String,
@@ -262,13 +276,26 @@ impl std::ops::Drop for ActiveScreenCast {
 #[derive(Debug)]
 pub struct ScreenCastStream {
     pipewire_node: u32,
-    // TODO: other stream metadata.
+    width: u32,
+    height: u32,
 }
 
 impl ScreenCastStream {
     /// Get the PipeWire node ID for this stream.
     pub fn pipewire_node(&self) -> u32 {
         self.pipewire_node
+    }
+
+    pub fn width(&self) -> u32 {
+        self.width
+    }
+
+    pub fn height(&self) -> u32 {
+        self.height
+    }
+
+    pub fn size(&self) -> (u32, u32) {
+        (self.width(), self.height())
     }
 }
 
@@ -277,14 +304,48 @@ impl std::convert::TryFrom<&dyn RefArg> for ScreenCastStream {
 
     fn try_from(value: &dyn RefArg) -> Result<Self, Self::Error> {
         let mut parts_iter = value.as_iter().ok_or(PortalError::Parse)?;
+
+        // Get node id
         let node_id = parts_iter
             .next()
             .and_then(|r| r.as_u64())
             .map(|r| r as u32)
             .ok_or(PortalError::Parse)?;
-        // TODO: parse other metdata here.
+
+        let metadata = parts_iter.next().ok_or(PortalError::Parse)?;
+
+        let mut width = 0;
+        let mut height = 0;
+
+        if let Some(mut dict_iter) = metadata.as_iter() {
+            while let Some(key) = dict_iter.next() {
+                if key.as_str() == Some("size") {
+                    if let Some(values) = dict_iter.next().ok_or(PortalError::Parse)?.as_iter() {
+                        for v in values {
+                            let mut v_iter = v.as_iter().ok_or(PortalError::Parse)?;
+                            width = v_iter
+                                .next()
+                                .and_then(|w| w.as_i64())
+                                .map(|w| w as u32)
+                                .ok_or(PortalError::Parse)?;
+
+                            height = v_iter
+                                .next()
+                                .and_then(|h| h.as_i64())
+                                .map(|h| h as u32)
+                                .ok_or(PortalError::Parse)?;
+                        }
+                    } else {
+                        return Err(PortalError::Parse);
+                    }
+                }
+            }
+        }
+
         Ok(ScreenCastStream {
             pipewire_node: node_id,
+            width,
+            height,
         })
     }
 }
@@ -297,6 +358,18 @@ bitflags! {
     pub struct SourceType : u32  {
         const MONITOR = 0b00001;
         const WINDOW = 0b00010;
+    }
+
+    /// Cursor Mode Bitflags
+    ///
+    /// Refer to the freedesktop [docs](https://flatpak.github.io/xdg-desktop-portal/docs/doc-org.freedesktop.impl.portal.ScreenCast.html#org-freedesktop-impl-portal-screencast-availablecursormodes)
+    /// to see more details about what these each mean
+    ///
+    /// Default: HIDDEN
+    pub struct CursorMode : u32 {
+        const HIDDEN = 0b00001;
+        const EMBEDDED = 0b00010;
+        const METADATA = 0b00100;
     }
 }
 
